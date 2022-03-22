@@ -1,0 +1,12 @@
+[package]
+name = "lsc_publisher"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+plotters = "*"
+anyhow = "1.0.43"
+rclrust = { git = "https://github.com/rclrust/rclrust.git", features = ["galactic"] }
+rclrust-msg = { git = "https://github.com/rclrust/rclrust.git"}
