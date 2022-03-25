@@ -13,4 +13,18 @@ add_custom_target(${PROJECT_NAME}
       --features rclrust/$ENV{ROS_DISTRO}
       --path ${CMAKE_CURRENT_SOURCE_DIR}
       --root ${CMAKE_INSTALL_PREFIX}/lib/${PROJECT_NAME}
+  COMMAND
+    cp 
+      ${CMAKE_INSTALL_PREFIX}/lib/${PROJECT_NAME}/bin/*
+      ${CMAKE_INSTALL_PREFIX}/lib/${PROJECT_NAME}
+)
+
+install(DIRECTORY
+  launch
+  DESTINATION share/${PROJECT_NAME}/
+)
+
+install(DIRECTORY
+  data
+  DESTINATION share/${PROJECT_NAME}/data
 )
