@@ -8,9 +8,9 @@ pub struct Odometry {
 }
 
 #[derive(Clone, Debug, Copy)]
-struct Point {
-    x: f32,
-    y: f32,
+pub struct Point {
+    pub x: f32,
+    pub y: f32,
     theta: f32,
     range: f32,
 }
@@ -38,8 +38,8 @@ fn angular_mid(p1: Point, p2: Point, theta: f32) -> Point {
 pub struct LiDAR {
     thetas: Vec<f32>,
     ranges: Vec<f32>,
-    points: Vec<Point>,
-    interpolated_points: Vec<Point>,
+    pub points: Vec<Point>,
+    pub interpolated_points: Vec<Point>,
 }
 
 impl LiDAR {
@@ -63,14 +63,20 @@ impl LiDAR {
         }
     }
     pub fn interpolate(self: &mut LiDAR) {
+        self.interpolate_verbose(false);
+    }
+    pub fn interpolate_verbose(self: &mut LiDAR, verbose: bool) {
         self.interpolated_points.clear();
         let mut iter = self.points.iter().peekable();
+
+        let mut last_th = 0.0;
 
         // always add first point
         let mut current_p = match iter.next().cloned() {
             Some(firstpoint) => {
                 let fp = firstpoint.clone();
-                self.interpolated_points.push(fp);
+                //self.interpolated_points.push(fp);
+                last_th = fp.theta;
                 fp
             }
             None => return, // zero points
@@ -79,6 +85,10 @@ impl LiDAR {
 
         let dangle = f32::to_radians(-1.0);
         let mut nangle = self.thetas.first().unwrap() + dangle;
+        if verbose {
+            println!("first nangle: {}", f32::to_degrees(nangle));
+        }
+        let mut cnt = 0;
         loop {
             let mut next_p: Point;
             let next_p = loop {
@@ -98,38 +108,47 @@ impl LiDAR {
             let mid_p = angular_mid(current_p, next_p, nangle);
             let mc_dist = distance(mid_p, last_original_p);
             let mn_dist = distance(mid_p, next_p);
-            const D_THRESHOLD: f32 = 0.05;
-            if mc_dist <= D_THRESHOLD || mn_dist <= D_THRESHOLD {
+            const DIS_THRESHOLD: f32 = 0.05;
+            const DEG_THRESHOLD: f32 = 0.5;
+            let ddeg = f32::to_degrees(last_th - mid_p.theta).abs();
+            if (mc_dist <= DIS_THRESHOLD || mn_dist <= DIS_THRESHOLD) && ddeg >= DEG_THRESHOLD {
                 self.interpolated_points.push(mid_p);
+                last_th = mid_p.theta;
+                current_p = mid_p;
             }
 
-            /*
-            println!(
-                "\ncx: {}, cy: {}, cth: {}\n nx: {}, ny: {}, nth: {}",
-                current_p.x,
-                current_p.y,
-                f32::to_degrees(current_p.theta),
-                next_p.x,
-                next_p.y,
-                f32::to_degrees(next_p.theta)
-            );
-            */
+            let lesthan = cnt < 5;
+            if verbose && lesthan {
+                println!(
+                    "\nnangle: {}, cx: {}, cy: {}, cth: {}\n nx: {}, ny: {}, nth: {}",
+                    f32::to_degrees(nangle),
+                    current_p.x,
+                    current_p.y,
+                    f32::to_degrees(current_p.theta),
+                    next_p.x,
+                    next_p.y,
+                    f32::to_degrees(next_p.theta)
+                );
+            }
 
             last_original_p = next_p;
-            current_p = mid_p;
             nangle += dangle; // update next angle
 
-            /* println!(
-                "mx: {}, my: {}, mth: {}\n c-dist: {}, n-dist: {}, mth2: {}",
-                mid_p.x,
-                mid_p.y,
-                f32::to_degrees(mid_p.theta),
-                mc_dist,
-                mn_dist,
-                f32::to_degrees(mid_p.y.atan2(mid_p.x))
-            ); */
+            if verbose && lesthan {
+                println!(
+                    "mx: {}, my: {}, mth: {}\n c-dist: {}, n-dist: {}, mth2: {}, ddeg: {}",
+                    mid_p.x,
+                    mid_p.y,
+                    f32::to_degrees(mid_p.theta),
+                    mc_dist,
+                    mn_dist,
+                    f32::to_degrees(mid_p.y.atan2(mid_p.x)),
+                    ddeg
+                );
 
-            // println!("isize: {}", self.interpolated_points.len());
+                println!("isize: {}", self.interpolated_points.len());
+            }
+            cnt += 1;
         }
     }
 }
@@ -159,6 +178,10 @@ impl Measurement {
         let angle_inc = f32::to_radians(-1.0);
         let dnum = (f32::abs(angle_max - angle_min) / f32::abs(angle_inc)) as usize;
 
+        for p in self.lidar.interpolated_points.iter() {
+            //println!("{:?}", p);
+        }
+
         let mut ranges = Vec::new();
         let mut intensities = Vec::new();
         let mut iter = self.lidar.interpolated_points.iter().peekable();
@@ -166,7 +189,10 @@ impl Measurement {
             let theta = angle_min + angle_inc * i as f32;
             match iter.peek() {
                 Some(&p) => {
-                    if p.theta == theta {
+                    //println!("idx: {}, theta: {}", i, f32::to_degrees(theta));
+                    //println!("p th: {}, rn: {}", f32::to_degrees(p.theta), p.range);
+                    if (p.theta - theta).abs() < 1e-3 {
+                        //println!("same");
                         ranges.push(p.range);
                         iter.next();
                     } else {
@@ -187,7 +213,7 @@ impl Measurement {
         );
 
         let t = toRosTime(self.time as f64);
-        println!("time {}.{}", t.sec, t.nanosec);
+        //println!("time {}.{}", t.sec, t.nanosec);
         LaserScan_ {
             header: Header_ {
                 frame_id: "laser".to_string(),

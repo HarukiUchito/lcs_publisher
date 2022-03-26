@@ -25,6 +25,11 @@ install(DIRECTORY
 )
 
 install(DIRECTORY
+  rviz
+  DESTINATION share/${PROJECT_NAME}/
+)
+
+install(DIRECTORY
   data
   DESTINATION share/${PROJECT_NAME}/data
 )

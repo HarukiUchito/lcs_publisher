@@ -29,9 +29,9 @@ from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
     rvizconfig = os.path.join(
-        get_package_share_directory('ndt_2d_slam'),
+        get_package_share_directory('lsc_publisher_node'),
         'rviz',
-        'cov.rviz'
+        'rviz.rviz'
     )
 
     return launch.LaunchDescription([
