@@ -8,5 +8,5 @@ edition = "2021"
 [dependencies]
 plotters = "*"
 anyhow = "1.0.43"
-rclrust = { git = "https://github.com/rclrust/rclrust.git", features = ["galactic"] }
-rclrust-msg = { git = "https://github.com/rclrust/rclrust.git"}
+rclrust = { path = "../../../git_repos/rclrust/rclrust", features = ["galactic"] }
+rclrust-msg = { path = "../../../git_repos/rclrust/rclrust-msg"}

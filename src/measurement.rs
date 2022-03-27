@@ -1,3 +1,7 @@
+use rclrust_msg::geometry_msgs::msg::Twist as Twist_;
+use rclrust_msg::geometry_msgs::msg::TwistWithCovariance as TwistWithCovariance_;
+use rclrust_msg::geometry_msgs::msg::TwistWithCovarianceStamped as TwistWithCovarianceStamped_;
+use rclrust_msg::geometry_msgs::msg::Vector3 as Vector3_;
 use rclrust_msg::sensor_msgs::msg::LaserScan as LaserScan_;
 use rclrust_msg::std_msgs::msg::Header as Header_;
 
@@ -69,7 +73,7 @@ impl LiDAR {
         self.interpolated_points.clear();
         let mut iter = self.points.iter().peekable();
 
-        let mut last_th = 0.0;
+        let mut last_th;
 
         // always add first point
         let mut current_p = match iter.next().cloned() {
@@ -153,7 +157,7 @@ impl LiDAR {
     }
 }
 
-pub fn toRosTime(time: f64) -> rclrust_msg::builtin_interfaces::msg::Time {
+pub fn to_ros_time(time: f64) -> rclrust_msg::builtin_interfaces::msg::Time {
     let sec = f64::floor(time);
     let nsec: u32 = ((time - sec) * 1e9) as u32;
     rclrust_msg::builtin_interfaces::msg::Time {
@@ -169,7 +173,31 @@ pub struct Measurement {
 }
 
 impl Measurement {
-    pub fn to_ros_laserscan(self: &mut Measurement) -> LaserScan_ {
+    pub fn to_ros_twist(self: &mut Measurement, frame_id: String) -> TwistWithCovarianceStamped_ {
+        TwistWithCovarianceStamped_ {
+            header: Header_ {
+                stamp: to_ros_time(self.time as f64),
+                frame_id: frame_id,
+            },
+            twist: TwistWithCovariance_ {
+                twist: Twist_ {
+                    linear: Vector3_ {
+                        x: self.odometry.x as f64,
+                        y: self.odometry.y as f64,
+                        z: self.odometry.theta as f64,
+                    },
+                    angular: Vector3_ {
+                        x: 0.0,
+                        y: 0.0,
+                        z: 0.0,
+                    },
+                },
+                covariance: [0.0; 36],
+            },
+        }
+    }
+
+    pub fn to_ros_laserscan(self: &mut Measurement, frame_id: String) -> LaserScan_ {
         let mut rmin = f32::MAX;
         let mut rmax = f32::MIN;
 
@@ -178,9 +206,9 @@ impl Measurement {
         let angle_inc = f32::to_radians(-1.0);
         let dnum = (f32::abs(angle_max - angle_min) / f32::abs(angle_inc)) as usize;
 
-        for p in self.lidar.interpolated_points.iter() {
-            //println!("{:?}", p);
-        }
+        //for p in self.lidar.interpolated_points.iter() {
+        //println!("{:?}", p);
+        //}
 
         let mut ranges = Vec::new();
         let mut intensities = Vec::new();
@@ -212,11 +240,11 @@ impl Measurement {
             dnum
         );
 
-        let t = toRosTime(self.time as f64);
+        let t = to_ros_time(self.time as f64);
         //println!("time {}.{}", t.sec, t.nanosec);
         LaserScan_ {
             header: Header_ {
-                frame_id: "laser".to_string(),
+                frame_id: frame_id,
                 stamp: t,
             },
             angle_min: angle_min,

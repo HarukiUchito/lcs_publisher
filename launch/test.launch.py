@@ -40,7 +40,8 @@ def generate_launch_description():
             executable='lsc_publisher',
             output='screen',
             emulate_tty=True,
-            name='lsc_publisher_node'
+            name='lsc_publisher_node',
+            parameters=[{'base_link_frame_name': 'base_link'}]
         ),
         launch_ros.actions.Node(
             package='rviz2',
